@@ -6,7 +6,7 @@ sys.setrecursionlimit(5000)
 block_cipher = None
 
 
-a = Analysis(['postthanksgivinglayout.py'],
+a = Analysis(['layout.py'],
              pathex=['D:\\dash'],
              binaries=[],
              datas=[('C:\\Users\\swann\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\dash_core_components\\', 'dash_core_components'),
@@ -43,4 +43,4 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='postthanksgivinglayout')
+               name='layout')
