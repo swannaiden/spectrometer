@@ -34,21 +34,17 @@ PyInstaller==3.6.
 #pyinstaller -c -F --add-data "assets/my.css;assets" --hidden-import "flask-compress" --clean postthanksgivinglayout.py
 '''
 import pkg_resources
-
 IS_FROZEN = hasattr(sys, '_MEIPASS')
-
 # backup true function
 _true_get_distribution = pkg_resources.get_distribution
 # create small placeholder for the dash call
 # _flask_compress_version = parse_version(get_distribution("flask-compress").version)
 _Dist = namedtuple('_Dist', ['version'])
-
 def _get_distribution(dist):
     if IS_FROZEN and dist == 'flask-compress':
         return _Dist('1.8.0')
     else:
         return _true_get_distribution(dist)
-
 # monkey patch the function so it can work once frozen and pkg_resources is of
 # no help
 pkg_resources.get_distribution = _get_distribution
@@ -148,13 +144,7 @@ app.layout = html.Div([
             html.Div(
                 [html.Label("Contrast", style={"vertical-align":"top"}),
                 dcc.Input(id = "Contrast", type="range", min="-100", max="100", value="0", style={"width":"60%","float":"right"})], style={"top-padding":"5px"}
-            ),
-            html.Br(),
-            # Saturation label and slider
-            html.Div(
-                [html.Label("Saturation", style={"vertical-align":"top"}),
-                dcc.Input(id = "Saturation", type="range", min="1", max="100", value="50", style={"width":"60%","float":"right"})], style={"top-padding":"5px"}
-            ),
+            )
         ], style={"background":"#f3faf0", "padding":"15px"}, className="grid-item"),
     
 
@@ -205,18 +195,7 @@ app.layout = html.Div([
                 dcc.Input(id="x2", placeholder="x2", type="text",style={"width":"40%"}),
                 html.P(",  ", style={"display":"inline", "vertical-align":"bottom", "font-size":"1.5em"}),
                 #y2 input
-                dcc.Input(id="y2", placeholder="y2", type="text",style={"width":"40%"}),
-            
-            # Slope intercept option
-            html.H4("Slope Intercept"),
-                #x intercept option
-                dcc.Input(id="x-int", placeholder="x Intercept", type="text",style={"width":"43%"}),
-                html.P("  or  ", style={"display":"inline", "font-size":"1em"}),
-                #y intercept option
-                dcc.Input(id="y-int", placeholder="y Intercept", type="text",style={"width":"43%"}),
-                html.Label("Slope", style={"vertical-align":"top"}),
-                # Slope slider
-                dcc.Input(type="range", min="1", max="100", value="50", style={"width":"70%","float":"right"})
+                dcc.Input(id="y2", placeholder="y2", type="text",style={"width":"40%"})
         ],style={"background":"#f0f7fa", "padding":"15px"}, className="grid-item"),
     ], className="grid-container"),
     
@@ -229,12 +208,12 @@ app.layout = html.Div([
             dcc.Interval(id = 'interval', interval = 300, n_intervals = 0),
             
             # Callibration
-            html.Button("G", disabled=True, className="green", style={"vertical-align":"middle", "margin-bottom":"10px"}),
-            # The green slider
+            dcc.Input(id="wavelength1", placeholder="123", type="text",style={"width":"8%"}),
+            # The first slider
             dcc.Input(type="range", min="0", max="1000", value="0", style={"width":"90%", "float":"right"}),
             html.Br(),
-            html.Button("B", disabled=True, className="blue",style={"vertical-align":"middle"}),
-            # The blue slider
+            dcc.Input(id="wavelength2", placeholder="234", type="text",style={"width":"8%"}),
+            # The second slider
             dcc.Input(type="range", min="0", max="1000", value="0", style={"width":"90%", "float":"right"}),
             html.Br(),
         ], style={"background":"#faf4f0", "padding":"15px"}, className="bgrid-item"),
@@ -327,7 +306,7 @@ def update_download_link(value):
 
 @app.callback(
     Output('placeholder6', 'n_clicks'),
-    [Input("Exposure", 'value'), Input("Contrast", 'value'), Input("Saturation", 'value')])
+    [Input("Exposure", 'value'), Input("Contrast", 'value')])
 def updateCamSettings(exp, con, sat):
 
     global exposure
@@ -595,4 +574,3 @@ if __name__ == '__main__':
         webbrowser.open_new('http://127.0.0.1:8050/')
     
     app.run_server(debug=True)
-
