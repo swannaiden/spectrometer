@@ -86,7 +86,8 @@ cameraCrop = [[0,160], [280, 180]]
 exposure = 0
 contrast = 0
 cameraID = 0
-spectrumWave = np.linspace(0,1000, cameraCrop[1][0] - cameraCrop[0][0])
+spectrumWave = np.linspace(cameraCrop[0][0],cameraCrop[1][0], cameraCrop[1][0] - cameraCrop[0][0])
+spectrumPixel = np.linspace(cameraCrop[0][0],cameraCrop[1][0], cameraCrop[1][0] - cameraCrop[0][0])
 spectrum = []
 ref_spectrum = []
 is_ref = False
@@ -231,13 +232,13 @@ app.layout = html.Div([
             dcc.Interval(id = 'interval', interval = 300, n_intervals = 0),
             
             # Callibration
-            dcc.Input(id="wavelength1", placeholder="123", type="text",style={"width":"8%"}),
+            dcc.Input(id="wavelength1", placeholder="327", value = '161', type="text",style={"width":"8%"}),
             # The first slider
-            dcc.Input(type="range", min="0", max="1000", value="0", style={"width":"90%", "float":"right"}),
+            dcc.Input(id="range1", type="range", min="0", max="1000", value="161", style={"width":"90%", "float":"right"}),
             html.Br(),
-            dcc.Input(id="wavelength2", placeholder="234", type="text",style={"width":"8%"}),
+            dcc.Input(id="wavelength2", placeholder="547",value = '782', type="text",style={"width":"8%"}),
             # The second slider
-            dcc.Input(type="range", min="0", max="1000", value="0", style={"width":"90%", "float":"right"}),
+            dcc.Input(id="range2", type="range", min="0", max="1000", value="782", style={"width":"90%", "float":"right"}),
             html.Br(),
         ], style={"background":"#faf4f0", "padding":"15px"}, className="bgrid-item"),
 
@@ -282,6 +283,7 @@ app.layout = html.Div([
     html.P(id='placeholder4', n_clicks = 0),
     html.P(id='placeholder5', n_clicks = 0),
     html.P(id='placeholder6', n_clicks = 0),
+    html.P(id='placeholder7', n_clicks = 0),
 
     # The help dropdown
     html.Details(children=[
@@ -293,6 +295,41 @@ app.layout = html.Div([
 ])
  
 '''app callbacks'''
+
+@app.callback(
+    Output('placeholder7', 'n_clicks'),
+    [Input('wavelength1', 'value'), Input('wavelength2', 'value'),  Input('range1', 'value'),  Input('range2', 'value')])
+def update_cal_sliders(wavelength1, wavelength2, range1, range2):
+    
+    percent1 = 9.514159e-4*float(range1) +.05797
+    percent2 = 9.514159e-4*float(range2) +.05797
+    wavelength1 = float(wavelength1)
+    wavelength2 = float(wavelength2)
+
+
+
+    #transform = np.polyfit([percent1*len(spectrumPixel)+spectrumPixel[0], percent2*len(spectrumPixel)+spectrumPixel[0]],[wavelength1, wavelength2], 1)
+    transform = [0,0]
+    transform[0] = (wavelength1 - wavelength2)/(percent1*len(spectrumPixel)+spectrumPixel[0]- percent2*len(spectrumPixel)+spectrumPixel[0])
+    transform[1] = transform[0]*-1*percent1*len(spectrumPixel)+spectrumPixel[0] + wavelength1
+    
+    print('transform',transform)
+    print('transform1',transform1)
+
+
+    global spectrumWave
+    spectrumWave = list(map(lambda val: val*transform[0]+ transform[1], spectrumPixel))
+    print(len(spectrumWave), len(spectrumPixel))
+
+    #print(spectrumWave)
+    #print('wavelengt', wavelength1, wavelength2)
+    #print('range', range1, range2)
+    print('percent', percent1, percent2)
+    #print('percent * lenght', percent1*len(spectrumWave), percent2*len(spectrumWave))
+    #print(transform)
+    #print(spectrumWave)
+    return 1
+
 
 @app.callback(
     Output('download-link', 'download'),
@@ -319,8 +356,18 @@ def update_download_link(value):
     
     if(value == ''):
         return ''
+    #print(len(spectrumWave))
+    #print(len(spectrum))
 
-    output = {'Wavelength': spectrumWave, 'Intensity': spectrum}
+    if(is_ref):
+        specToGraph = calcRef(ref_spectrum, spectrum)
+    elif(is_abs):
+        specToGraph = calcAbs(ref_spectrum, spectrum)
+    else:
+        specToGraph = spectrum
+    
+    print(len(spectrumWave), len(specToGraph))
+    output = {'Wavelength': spectrumWave, 'Intensity': specToGraph}
     dff = pd.DataFrame(output)
     csv_string = dff.to_csv(index=False, encoding='utf-8')
     csv_string = "data:text/csv;charset=utf-8," + urllib.parse.quote(csv_string)
@@ -330,7 +377,7 @@ def update_download_link(value):
 @app.callback(
     Output('placeholder6', 'n_clicks'),
     [Input("Exposure", 'value'), Input("Contrast", 'value')])
-def updateCamSettings(exp, con, sat):
+def updateCamSettings(exp, con):
 
     global exposure
     global contrast
@@ -366,6 +413,14 @@ def updatePoints(x1, y1, x2, y2):
         if(y2.isdigit()):
             if(int(y2) > cameraCrop[0][1]):
                 cameraCrop[1][1] = int(y2)
+
+    global spectrumWave
+    spectrumWave = np.linspace(0,1000, cameraCrop[1][0] - cameraCrop[0][0])
+    global spectrumPixel
+    spectrumPixel = np.linspace(cameraCrop[0][0],cameraCrop[1][0], cameraCrop[1][0] - cameraCrop[0][0])
+    print(cameraCrop)
+    print(len(spectrumPixel))
+
 
     return 1
 
@@ -454,7 +509,7 @@ def update_graph(n):
         "type": "linear", 
         "range": [0, 1000], 
         "title": "Wavelength (nm)", 
-        "autorange": False
+        "autorange": True
     }, 
     "yaxis": {
         "type": "linear", 
@@ -481,7 +536,7 @@ def update_graph(n):
     "name": "Absorbance", 
     "type": "scatter", 
     #this is where the calibration happens
-    "x": np.linspace(0, 1000, len(spectrum)),
+    "x": spectrumWave, #np.linspace(0, 1000, len(spectrum)),
     "y": specToGraph #random.randint(100, size=(28))#["56.7", "74.6", "95", "97.9", "100", "98", "94.6", "91.3", "87", "83", "77.5", "57.9", "34.9", "22.6", "18", "18.4", "19.6", "20.1", "24.1", "31.5", "38.5", "42", "46.6", "57.1", "62.3", "60.3", "72", "86.4", "87.6"]
     }
 
@@ -492,9 +547,9 @@ def update_graph(n):
                 source=graph_background,
                 xref="x",
                 yref="y",
-                x=200,
+                x=440,
                 y=2,
-                sizex=600,
+                sizex=300,
                 sizey=4,
                 sizing="stretch",
                 opacity=0.5,
@@ -596,4 +651,4 @@ if __name__ == '__main__':
     if not os.environ.get("WERKZEUG_RUN_MAIN"):
         webbrowser.open_new('http://127.0.0.1:8050/')
     
-    app.run_server(debug=False)
+    app.run_server(debug=True)
